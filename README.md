@@ -13,6 +13,12 @@ measured in real time from a single camera, processed entirely on your machine.
 [![Platform](https://img.shields.io/badge/Windows-11-0078D6?logo=windows&logoColor=white)](#)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
+<br>
+
+<img src="docs/dashboard.png" alt="AI Health Cam live dashboard" width="760">
+
+<sub>Live dashboard — vitals computed from a single webcam, processed entirely on-device.</sub>
+
 </div>
 
 ---
@@ -23,22 +29,13 @@ AI Health Cam reads your webcam in real time and renders a live wellness
 dashboard — no wearables, no cloud services, and no video is ever stored. When a
 condition needs your attention, it speaks a short prompt in natural Thai.
 
-```
-+------------------------------------------------+
-|  [ webcam feed ]           |  AI HEALTH CAM     |
-|                            | ------------------ |
-|        +------+            |  HEART RATE        |
-|        | face |  <- rPPG   |   72 bpm  (38%)    |
-|        +------+            |  STRESS (HRV)      |
-|         /    \             |   24/100 relaxed   |
-|      shoulders <- posture  |  BLINK RATE        |
-|                            |   17/min           |
-|                            |  ALERTNESS  awake  |
-|                            |  POSTURE    good   |
-|                            |  SCREEN TIME 04:12 |
-|                            |  WATER  last 0h21m |
-+------------------------------------------------+
-```
+<div align="center">
+
+<img src="docs/overview-th.png" alt="AI Health Cam system overview" width="500">
+
+<sub>System overview (Thai): measurements, processing pipeline, privacy guarantees and voice alerts.</sub>
+
+</div>
 
 ---
 
