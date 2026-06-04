@@ -1,0 +1,19 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+
+# MediaPipe model bundles — large & downloadable via download_models.py
+models/*.task
+
+# Intermediate TTS audio (final WAVs are committed)
+assets/*.mp3
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

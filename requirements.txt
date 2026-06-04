@@ -1,0 +1,3 @@
+mediapipe>=0.10.35
+scipy>=1.11
+# opencv-contrib-python and numpy are pulled in by mediapipe
