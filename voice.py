@@ -6,6 +6,7 @@
 ตอนที่เงื่อนไขยังเป็นจริงต่อเนื่อง (เช่น ง่วงค้างหลายวินาที)
 """
 import os
+import sys
 import time
 
 try:
@@ -13,8 +14,15 @@ try:
 except ImportError:
     winsound = None
 
-_HERE = os.path.dirname(os.path.abspath(__file__))
-_ASSETS = os.path.join(_HERE, "assets")
+
+def _resource_base() -> str:
+    """รองรับทั้งตอนรันเป็น .py และตอน build เป็น .exe (PyInstaller -> sys._MEIPASS)"""
+    if getattr(sys, "frozen", False):
+        return sys._MEIPASS
+    return os.path.dirname(os.path.abspath(__file__))
+
+
+_ASSETS = os.path.join(_resource_base(), "assets")
 
 
 class VoiceAlerts:

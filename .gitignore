@@ -12,6 +12,11 @@ models/*.task
 # Intermediate TTS audio (final WAVs are committed)
 assets/*.mp3
 
+# PyInstaller build artifacts
+build/
+dist/
+*.manifest
+
 # OS / editor
 .DS_Store
 Thumbs.db

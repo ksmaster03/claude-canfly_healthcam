@@ -192,6 +192,27 @@ python selftest.py     # verifies models load and rPPG / stress math (no camera)
 
 ---
 
+## Building a standalone executable
+
+The app can be packaged into a self-contained Windows application with
+[PyInstaller](https://pyinstaller.org/), so it runs on any 64-bit Windows
+machine without a Python installation. The bundled spec collects the MediaPipe
+data files and embeds the models and voice clips.
+
+```powershell
+pip install pyinstaller
+python download_models.py        # ensure models/ exist before bundling
+python make_voice.py             # ensure assets/ exist before bundling
+pyinstaller build_exe.spec --noconfirm
+```
+
+The result is `dist\AIHealthCam\` (~320 MB, mostly MediaPipe / OpenCV / SciPy).
+Zip and copy the whole folder to another machine, then run `AIHealthCam.exe`.
+Set `console=True` in `build_exe.spec` if you need a debug console while
+troubleshooting a build.
+
+---
+
 ## Privacy
 
 All processing happens on-device. There is no network call at runtime, no frame

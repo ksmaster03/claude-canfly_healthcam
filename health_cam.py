@@ -53,7 +53,15 @@ from monitors import (
     RPPGEstimator, EyeMonitor, PostureMonitor, StressMonitor, DrinkMonitor)
 from voice import VoiceAlerts
 
-_HERE = os.path.dirname(os.path.abspath(__file__))
+def resource_base() -> str:
+    """โฟลเดอร์ฐานสำหรับหาไฟล์ข้อมูล — รองรับทั้งตอนรันเป็น .py และตอน build เป็น .exe
+    (PyInstaller จะคลายไฟล์ที่ bundle ไว้ไปที่ sys._MEIPASS)"""
+    if getattr(sys, "frozen", False):
+        return sys._MEIPASS
+    return os.path.dirname(os.path.abspath(__file__))
+
+
+_HERE = resource_base()
 FACE_MODEL = os.path.join(_HERE, "models", "face_landmarker.task")
 POSE_MODEL = os.path.join(_HERE, "models", "pose_landmarker_lite.task")
 
