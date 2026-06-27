@@ -17,7 +17,7 @@ import { PostureMonitor } from "./monitors/posture";
 import { DrinkMonitor } from "./monitors/drink";
 import { StressMonitor } from "./monitors/stress";
 import { VoiceAlerts } from "./monitors/voice";
-import { MetricCard, type Tone } from "./components/MetricCard";
+import type { Tone } from "./components/MetricCard";
 
 const BREAK_SECONDS = 120 * 60; // เตือนลุกเมื่อนั่งต่อเนื่องเกิน 2 ชม.
 const WATER_SECONDS = 240 * 60; // เตือนดื่มน้ำเมื่อไม่ดื่มเกิน 4 ชม.
@@ -103,6 +103,7 @@ export default function App() {
   const [status, setStatus] = useState("พร้อมเริ่ม");
   const [fps, setFps] = useState(0);
   const [muted, setMuted] = useState(false);
+  const [facingMode, setFacingMode] = useState<"user" | "environment">("user");
   const [m, setM] = useState<Metrics>(EMPTY);
 
   async function start() {
@@ -125,13 +126,7 @@ export default function App() {
       void ageRef.current.load(); // โหลด TF.js + โมเดลอายุเบื้องหลัง (ไม่บล็อกกล้อง)
 
       setStatus("กำลังขอสิทธิ์กล้อง…");
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { width: 1280, height: 720, facingMode: "user" },
-        audio: false,
-      });
-      const video = videoRef.current!;
-      video.srcObject = stream;
-      await video.play();
+      await openStream(facingMode);
 
       setRunning(true);
       setStatus("กำลังทำงาน");
@@ -148,6 +143,31 @@ export default function App() {
     setRunning(false);
     setM(EMPTY);
     setStatus("หยุดแล้ว");
+  }
+
+  /** เปิดสตรีมกล้องตาม facingMode (user=หน้า, environment=หลัง) */
+  async function openStream(fm: "user" | "environment") {
+    const video = videoRef.current!;
+    (video.srcObject as MediaStream | null)?.getTracks().forEach((t) => t.stop());
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: fm, width: { ideal: 720 }, height: { ideal: 1280 } },
+      audio: false,
+    });
+    video.srcObject = stream;
+    await video.play();
+  }
+
+  /** สลับกล้องหน้า/หลัง */
+  async function switchCamera() {
+    const next = facingMode === "user" ? "environment" : "user";
+    setFacingMode(next);
+    if (running) {
+      try {
+        await openStream(next);
+      } catch {
+        setStatus("สลับกล้องไม่ได้ (อุปกรณ์อาจมีกล้องเดียว)");
+      }
+    }
   }
 
   useEffect(() => {
@@ -298,7 +318,7 @@ export default function App() {
 
   useEffect(() => () => stop(), []);
 
-  // ----- คำนวณ tone/ข้อความของแต่ละการ์ด -----
+  // ----- tone ของแต่ละค่า -----
   const hrTone: Tone = m.hr == null ? "muted" : m.hrConf > 0.25 ? "good" : "warn";
   const stressTone: Tone =
     m.stress == null ? "muted" : m.stress < 33 ? "good" : m.stress < 66 ? "warn" : "bad";
@@ -310,147 +330,119 @@ export default function App() {
     ? "bad"
     : "neutral";
 
-  return (
-    <div className="min-h-full mx-auto max-w-5xl px-4 py-5 sm:px-6">
-      <header className="text-center mb-5">
-        <h1 className="text-2xl font-bold tracking-tight text-slate-900">
-          AI Health Cam
-        </h1>
-        <p className="text-sm text-slate-500">
-          ตรวจสุขภาพจากเว็บแคม • ประมวลผลในเบราว์เซอร์ 100% • ภาพไม่ออกจากเครื่อง
-        </p>
-      </header>
+  // การ์ดข้อมูล (ชิป) ที่จะซ้อนบนภาพกล้อง
+  const chips: { label: string; value: string; tone: Tone }[] = [
+    { label: "หัวใจ", value: m.hr == null ? "วัด…" : `${Math.round(m.hr)} bpm`, tone: hrTone },
+    { label: "เครียด", value: m.stress == null ? "วัด…" : `${Math.round(m.stress)}`, tone: stressTone },
+    { label: "อารมณ์", value: m.faceFound ? MOOD_TH[m.mood] ?? m.mood : "—", tone: moodTone },
+    { label: "อายุ", value: m.age == null ? "—" : `${Math.round(m.age)} ปี`, tone: "neutral" },
+    { label: "กะพริบ", value: m.faceFound ? `${m.blink}/น.` : "—", tone: !m.faceFound ? "muted" : m.blink < 8 ? "bad" : "good" },
+    { label: "ตื่นตัว", value: !m.faceFound ? "—" : m.drowsy ? "ง่วง!" : "ตื่นตัว", tone: !m.faceFound ? "muted" : m.drowsy ? "bad" : "good" },
+    { label: "ท่านั่ง", value: m.posture === "good" ? "ดี" : m.posture === "bad" ? (m.slouch ? "หลังค่อม" : "ไหล่เอียง") : "ตั้งท่า", tone: m.posture === "good" ? "good" : m.posture === "bad" ? "bad" : "warn" },
+    { label: "เวลาจอ", value: m.screen, tone: m.breakAlert ? "bad" : "neutral" },
+    { label: "ดื่มน้ำ", value: m.drinking ? "ดื่ม :)" : m.water, tone: m.drinking ? "good" : m.waterDue ? "bad" : "neutral" },
+  ];
 
-      <div className="relative w-full aspect-video rounded-2xl overflow-hidden bg-slate-900 ring-1 ring-slate-300 shadow">
+  const chipColor: Record<Tone, string> = {
+    good: "text-emerald-300",
+    warn: "text-amber-300",
+    bad: "text-rose-300",
+    neutral: "text-white",
+    muted: "text-white/50",
+  };
+  const mirror = facingMode === "user"; // กล้องหน้า mirror เหมือนกระจก, กล้องหลังไม่ต้อง
+
+  return (
+    <div className="relative w-full h-[100dvh] bg-slate-100 sm:flex sm:justify-center sm:items-start sm:py-4">
+      {/* กรอบแบบมือถือแนวตั้ง — มือถือเต็มจอ, เดสก์ท็อปเป็นกรอบ 9:16 ตรงกลาง */}
+      <div className="relative w-full h-full overflow-hidden bg-slate-900 sm:h-[88vh] sm:max-h-[900px] sm:w-auto sm:aspect-[9/16] sm:rounded-[2rem] sm:shadow-2xl sm:ring-1 sm:ring-slate-300">
         <video
           ref={videoRef}
-          className="absolute inset-0 w-full h-full object-cover -scale-x-100"
+          className={`absolute inset-0 w-full h-full object-cover ${mirror ? "-scale-x-100" : ""}`}
           playsInline
           muted
         />
         <canvas
           ref={canvasRef}
-          className="absolute inset-0 w-full h-full object-cover -scale-x-100"
+          className={`absolute inset-0 w-full h-full object-cover ${mirror ? "-scale-x-100" : ""}`}
         />
-        {!running && (
-          <div className="absolute inset-0 grid place-items-center text-slate-300">
-            กด “เริ่ม” เพื่อเปิดกล้อง
+
+        {/* แถบบน: ชื่อ + สถานะ + ปุ่มเสียง/สลับกล้อง */}
+        <div className="absolute top-0 inset-x-0 p-3 flex items-start justify-between bg-gradient-to-b from-black/60 to-transparent">
+          <div className="text-white drop-shadow">
+            <div className="font-bold leading-tight">AI Health Cam</div>
+            <div className="text-[11px] text-white/75">
+              {running
+                ? `${fps} fps • ${m.faceFound ? "พบใบหน้า" : "ไม่พบใบหน้า"}`
+                : status}
+            </div>
           </div>
-        )}
+          <div className="flex gap-2">
+            <button
+              onClick={() => setMuted((v) => !v)}
+              className="w-10 h-10 grid place-items-center rounded-full bg-black/40 text-white text-lg backdrop-blur active:scale-95"
+            >
+              {muted ? "🔇" : "🔊"}
+            </button>
+            <button
+              onClick={switchCamera}
+              title="สลับกล้องหน้า/หลัง"
+              className="w-10 h-10 grid place-items-center rounded-full bg-black/40 text-white text-lg backdrop-blur active:scale-95"
+            >
+              🔄
+            </button>
+          </div>
+        </div>
+
+        {/* เตือนพัก */}
         {m.breakAlert && (
-          <div className="absolute top-0 inset-x-0 bg-rose-500/90 text-white text-center py-2 font-semibold">
+          <div className="absolute top-16 inset-x-3 rounded-lg bg-rose-500/90 text-white text-center py-2 text-sm font-semibold">
             ถึงเวลาลุกขยับตัวแล้ว!
           </div>
         )}
-      </div>
 
-      {/* แถบควบคุม */}
-      <div className="flex flex-wrap items-center gap-3 mt-4">
-        {!running ? (
-          <button
-            onClick={start}
-            className="px-5 py-2.5 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white font-semibold transition"
-          >
-            เริ่ม
-          </button>
-        ) : (
-          <button
-            onClick={stop}
-            className="px-5 py-2.5 rounded-lg bg-rose-600 hover:bg-rose-500 text-white font-semibold transition"
-          >
-            หยุด
-          </button>
+        {/* ยังไม่เริ่ม: ปุ่มกลางจอ */}
+        {!running && (
+          <div className="absolute inset-0 grid place-items-center">
+            <button
+              onClick={start}
+              className="px-10 py-4 rounded-2xl bg-cyan-500 hover:bg-cyan-400 text-white text-lg font-bold shadow-lg active:scale-95"
+            >
+              ▶ เริ่ม
+            </button>
+          </div>
         )}
-        <button
-          onClick={() => (calibrateRef.current = true)}
-          disabled={!running}
-          className="px-4 py-2.5 rounded-lg bg-slate-200 hover:bg-slate-300 disabled:opacity-40 text-slate-700 font-medium transition"
-        >
-          ตั้งท่านั่ง (calibrate)
-        </button>
-        <button
-          onClick={() => setMuted((v) => !v)}
-          className="px-4 py-2.5 rounded-lg bg-slate-200 hover:bg-slate-300 text-slate-700 font-medium transition"
-        >
-          {muted ? "🔇 เสียงปิด" : "🔊 เสียงเปิด"}
-        </button>
-        <span className="text-sm text-slate-500 ml-auto">
-          {status}
-          {running && (
-            <>
-              {" "}• {fps} fps •{" "}
-              <span className={m.faceFound ? "text-emerald-600" : "text-amber-600"}>
-                {m.faceFound ? "พบใบหน้า" : "ไม่พบใบหน้า"}
-              </span>
-            </>
-          )}
-        </span>
-      </div>
 
-      {/* การ์ดตรวจวัด */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 mt-5">
-        <MetricCard
-          label="หัวใจ (Heart Rate)"
-          value={m.hr == null ? "กำลังวัด…" : `${Math.round(m.hr)} bpm`}
-          sub={m.hr == null ? "นั่งนิ่ง ~10 วิ" : `ความมั่นใจ ${Math.round(m.hrConf * 100)}%`}
-          tone={hrTone}
-        />
-        <MetricCard
-          label="ความเครียด (HRV)"
-          value={m.stress == null ? "กำลังวัด…" : `${Math.round(m.stress)}/100`}
-          sub={m.stress == null ? "" : m.stressLabel}
-          tone={stressTone}
-        />
-        <MetricCard
-          label="อารมณ์ (Mood)"
-          value={m.faceFound ? MOOD_TH[m.mood] ?? m.mood : "—"}
-          tone={moodTone}
-        />
-        <MetricCard
-          label="อายุโดยประมาณ"
-          value={m.age == null ? (m.faceFound ? "กำลังวัด…" : "—") : `${Math.round(m.age)} ปี`}
-          tone={m.age == null ? "muted" : "neutral"}
-        />
-        <MetricCard
-          label="กะพริบตา"
-          value={m.faceFound ? `${m.blink}/นาที` : "—"}
-          sub={m.faceFound && m.blink < 8 ? "ต่ำ — เสี่ยงตาแห้ง" : ""}
-          tone={!m.faceFound ? "muted" : m.blink < 8 ? "bad" : "good"}
-        />
-        <MetricCard
-          label="ความตื่นตัว"
-          value={!m.faceFound ? "—" : m.drowsy ? "ง่วง!" : "ตื่นตัว"}
-          tone={!m.faceFound ? "muted" : m.drowsy ? "bad" : "good"}
-        />
-        <MetricCard
-          label="ท่านั่ง"
-          value={
-            m.posture === "good"
-              ? "ดี"
-              : m.posture === "bad"
-              ? m.slouch
-                ? "หลังค่อม"
-                : "ไหล่เอียง"
-              : "กดปุ่มตั้งท่า"
-          }
-          sub={m.posture !== "calibrate" ? `เอียง ${Math.round(m.tilt)}°` : ""}
-          tone={m.posture === "good" ? "good" : m.posture === "bad" ? "bad" : "warn"}
-        />
-        <MetricCard
-          label="เวลาหน้าจอ"
-          value={m.screen}
-          tone={m.breakAlert ? "bad" : "neutral"}
-        />
-        <MetricCard
-          label="ดื่มน้ำ"
-          value={m.water}
-          tone={m.drinking ? "good" : m.waterDue ? "bad" : "neutral"}
-        />
+        {/* แถบล่าง: ข้อมูลซ้อนบนภาพ + ปุ่มควบคุม */}
+        {running && (
+          <div className="absolute bottom-0 inset-x-0 p-3 pt-12 bg-gradient-to-t from-black/75 via-black/40 to-transparent">
+            <div className="grid grid-cols-3 gap-1.5 mb-3">
+              {chips.map((c) => (
+                <div key={c.label} className="rounded-xl bg-black/40 backdrop-blur px-2.5 py-1.5">
+                  <div className="text-[10px] text-white/60 leading-none mb-0.5">{c.label}</div>
+                  <div className={`text-sm font-bold leading-tight tabular-nums ${chipColor[c.tone]}`}>
+                    {c.value}
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={stop}
+                className="flex-1 py-2.5 rounded-xl bg-rose-600/90 hover:bg-rose-500 text-white font-semibold active:scale-95"
+              >
+                หยุด
+              </button>
+              <button
+                onClick={() => (calibrateRef.current = true)}
+                className="px-4 py-2.5 rounded-xl bg-white/20 hover:bg-white/30 text-white font-medium backdrop-blur active:scale-95"
+              >
+                ตั้งท่านั่ง
+              </button>
+            </div>
+          </div>
+        )}
       </div>
-
-      <p className="text-center text-xs text-slate-400 mt-6">
-        เครื่องมือ wellness เพื่อดูแนวโน้ม ไม่ใช่อุปกรณ์การแพทย์ • เปิดบนมือถือได้ (ต้องเป็น HTTPS)
-      </p>
     </div>
   );
 }
