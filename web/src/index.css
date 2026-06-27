@@ -1,5 +1,55 @@
 @import "tailwindcss";
 
+/* ฟอนต์ไทยหลัก: Sarabun (self-host) */
+@font-face {
+  font-family: "Sarabun";
+  font-weight: 400;
+  font-display: swap;
+  src: url("/fonts/Sarabun-Regular.ttf") format("truetype");
+}
+@font-face {
+  font-family: "Sarabun";
+  font-weight: 500;
+  font-display: swap;
+  src: url("/fonts/Sarabun-Medium.ttf") format("truetype");
+}
+@font-face {
+  font-family: "Sarabun";
+  font-weight: 600;
+  font-display: swap;
+  src: url("/fonts/Sarabun-SemiBold.ttf") format("truetype");
+}
+@font-face {
+  font-family: "Sarabun";
+  font-weight: 700;
+  font-display: swap;
+  src: url("/fonts/Sarabun-Bold.ttf") format("truetype");
+}
+
+/* ไอคอน: Material Icons Round (self-host) */
+@font-face {
+  font-family: "Material Icons Round";
+  font-weight: normal;
+  font-style: normal;
+  src: url("/fonts/MaterialIconsRound-Regular.otf") format("opentype");
+}
+.material-icons-round {
+  font-family: "Material Icons Round";
+  font-weight: normal;
+  font-style: normal;
+  font-size: 24px;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  display: inline-block;
+  white-space: nowrap;
+  word-wrap: normal;
+  direction: ltr;
+  -webkit-font-feature-settings: "liga";
+  font-feature-settings: "liga"; /* ใช้ ligature: ใส่ชื่อไอคอนเป็นข้อความได้ */
+  -webkit-font-smoothing: antialiased;
+}
+
 html,
 body,
 #root {
@@ -7,5 +57,5 @@ body,
   margin: 0;
   background: #f8fafc; /* slate-50 — ธีมสว่าง */
   color: #0f172a; /* slate-900 */
-  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-family: "Sarabun", system-ui, -apple-system, "Segoe UI", sans-serif;
 }

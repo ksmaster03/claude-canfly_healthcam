@@ -85,6 +85,11 @@ const EMPTY: Metrics = {
 
 const pad = (n: number) => String(n).padStart(2, "0");
 
+/** ไอคอน Material Icons Round (ใช้ ligature: ใส่ชื่อไอคอนเป็นข้อความ) */
+const Icon = ({ name, className = "" }: { name: string; className?: string }) => (
+  <span className={`material-icons-round ${className}`}>{name}</span>
+);
+
 export default function App() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -149,8 +154,9 @@ export default function App() {
   async function openStream(fm: "user" | "environment") {
     const video = videoRef.current!;
     (video.srcObject as MediaStream | null)?.getTracks().forEach((t) => t.stop());
+    // ขอ FOV ตามธรรมชาติของกล้อง (ไม่บังคับ resolution) เพื่อไม่ให้ถูก crop/ซูมมาก
     const stream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: fm, width: { ideal: 720 }, height: { ideal: 1280 } },
+      video: { facingMode: fm },
       audio: false,
     });
     video.srcObject = stream;
@@ -358,38 +364,41 @@ export default function App() {
       <div className="relative w-full h-full overflow-hidden bg-slate-900 sm:h-[88vh] sm:max-h-[900px] sm:w-auto sm:aspect-[9/16] sm:rounded-[2rem] sm:shadow-2xl sm:ring-1 sm:ring-slate-300">
         <video
           ref={videoRef}
-          className={`absolute inset-0 w-full h-full object-cover ${mirror ? "-scale-x-100" : ""}`}
+          className={`absolute inset-0 w-full h-full object-contain ${mirror ? "-scale-x-100" : ""}`}
           playsInline
           muted
         />
         <canvas
           ref={canvasRef}
-          className={`absolute inset-0 w-full h-full object-cover ${mirror ? "-scale-x-100" : ""}`}
+          className={`absolute inset-0 w-full h-full object-contain ${mirror ? "-scale-x-100" : ""}`}
         />
 
         {/* แถบบน: ชื่อ + สถานะ + ปุ่มเสียง/สลับกล้อง */}
         <div className="absolute top-0 inset-x-0 p-3 flex items-start justify-between bg-gradient-to-b from-black/60 to-transparent">
-          <div className="text-white drop-shadow">
-            <div className="font-bold leading-tight">AI Health Cam</div>
-            <div className="text-[11px] text-white/75">
-              {running
-                ? `${fps} fps • ${m.faceFound ? "พบใบหน้า" : "ไม่พบใบหน้า"}`
-                : status}
+          <div className="flex items-center gap-2 text-white drop-shadow">
+            <img src="/logo.png" alt="logo" className="h-7 w-auto" />
+            <div>
+              <div className="font-bold leading-tight">AI Health Cam</div>
+              <div className="text-[11px] text-white/75">
+                {running
+                  ? `${fps} fps • ${m.faceFound ? "พบใบหน้า" : "ไม่พบใบหน้า"}`
+                  : status}
+              </div>
             </div>
           </div>
           <div className="flex gap-2">
             <button
               onClick={() => setMuted((v) => !v)}
-              className="w-10 h-10 grid place-items-center rounded-full bg-black/40 text-white text-lg backdrop-blur active:scale-95"
+              className="w-10 h-10 grid place-items-center rounded-full bg-black/40 text-white backdrop-blur active:scale-95"
             >
-              {muted ? "🔇" : "🔊"}
+              <Icon name={muted ? "volume_off" : "volume_up"} />
             </button>
             <button
               onClick={switchCamera}
               title="สลับกล้องหน้า/หลัง"
-              className="w-10 h-10 grid place-items-center rounded-full bg-black/40 text-white text-lg backdrop-blur active:scale-95"
+              className="w-10 h-10 grid place-items-center rounded-full bg-black/40 text-white backdrop-blur active:scale-95"
             >
-              🔄
+              <Icon name="flip_camera_ios" />
             </button>
           </div>
         </div>
@@ -406,9 +415,9 @@ export default function App() {
           <div className="absolute inset-0 grid place-items-center">
             <button
               onClick={start}
-              className="px-10 py-4 rounded-2xl bg-cyan-500 hover:bg-cyan-400 text-white text-lg font-bold shadow-lg active:scale-95"
+              className="flex items-center gap-2 px-10 py-4 rounded-2xl bg-cyan-500 hover:bg-cyan-400 text-white text-lg font-bold shadow-lg active:scale-95"
             >
-              ▶ เริ่ม
+              <Icon name="play_arrow" /> เริ่ม
             </button>
           </div>
         )}
@@ -429,15 +438,15 @@ export default function App() {
             <div className="flex gap-2">
               <button
                 onClick={stop}
-                className="flex-1 py-2.5 rounded-xl bg-rose-600/90 hover:bg-rose-500 text-white font-semibold active:scale-95"
+                className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-rose-600/90 hover:bg-rose-500 text-white font-semibold active:scale-95"
               >
-                หยุด
+                <Icon name="stop" className="!text-xl" /> หยุด
               </button>
               <button
                 onClick={() => (calibrateRef.current = true)}
-                className="px-4 py-2.5 rounded-xl bg-white/20 hover:bg-white/30 text-white font-medium backdrop-blur active:scale-95"
+                className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-white/20 hover:bg-white/30 text-white font-medium backdrop-blur active:scale-95"
               >
-                ตั้งท่านั่ง
+                <Icon name="event_seat" className="!text-xl" /> ตั้งท่านั่ง
               </button>
             </div>
           </div>
