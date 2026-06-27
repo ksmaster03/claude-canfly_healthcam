@@ -211,6 +211,21 @@ Zip and copy the whole folder to another machine, then run `AIHealthCam.exe`.
 Set `console=True` in `build_exe.spec` if you need a debug console while
 troubleshooting a build.
 
+### Note on Windows Smart App Control
+
+Windows 11 **Smart App Control (SAC)** blocks unsigned executables and provides
+no "run anyway" option. A freshly built, unsigned `AIHealthCam.exe` will be
+blocked on a machine where SAC is enforced.
+
+- **Running from source instead of the exe** is the simplest fix: launch with
+  `run_health_cam.vbs` (silent) or `run_health_cam.bat`. These run the app
+  through the digitally signed Python interpreter, which SAC trusts.
+- **Distributing the exe** to SAC-enabled machines requires **code signing**,
+  ideally with an EV certificate so it earns reputation immediately.
+
+Do not turn SAC off to work around this — switching it off is a one-way change
+that cannot be re-enabled without resetting Windows.
+
 ---
 
 ## Privacy
