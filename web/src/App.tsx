@@ -17,6 +17,7 @@ import { PostureMonitor } from "./monitors/posture";
 import { DrinkMonitor } from "./monitors/drink";
 import { StressMonitor } from "./monitors/stress";
 import { VoiceAlerts } from "./monitors/voice";
+import { fetchVisitorCount } from "./counter";
 import type { Tone } from "./components/MetricCard";
 
 const BREAK_SECONDS = 120 * 60; // เตือนลุกเมื่อนั่งต่อเนื่องเกิน 2 ชม.
@@ -109,6 +110,7 @@ export default function App() {
   const [fps, setFps] = useState(0);
   const [muted, setMuted] = useState(false);
   const [facingMode, setFacingMode] = useState<"user" | "environment">("user");
+  const [visitors, setVisitors] = useState<number | null>(null);
   const [m, setM] = useState<Metrics>(EMPTY);
 
   async function start() {
@@ -179,6 +181,11 @@ export default function App() {
   useEffect(() => {
     voiceRef.current.enabled = !muted;
   }, [muted]);
+
+  // นับผู้ใช้งาน (ครั้งเดียวตอนเปิดหน้า)
+  useEffect(() => {
+    void fetchVisitorCount().then(setVisitors);
+  }, []);
 
   // ลูปประมวลผลต่อเฟรม
   useEffect(() => {
@@ -410,15 +417,23 @@ export default function App() {
           </div>
         )}
 
-        {/* ยังไม่เริ่ม: ปุ่มกลางจอ */}
+        {/* ยังไม่เริ่ม: ปุ่มกลางจอ + ตัวนับผู้ใช้ */}
         {!running && (
           <div className="absolute inset-0 grid place-items-center">
-            <button
-              onClick={start}
-              className="flex items-center gap-2 px-10 py-4 rounded-2xl bg-cyan-500 hover:bg-cyan-400 text-white text-lg font-bold shadow-lg active:scale-95"
-            >
-              <Icon name="play_arrow" /> เริ่ม
-            </button>
+            <div className="flex flex-col items-center gap-5">
+              <button
+                onClick={start}
+                className="flex items-center gap-2 px-10 py-4 rounded-2xl bg-cyan-500 hover:bg-cyan-400 text-white text-lg font-bold shadow-lg active:scale-95"
+              >
+                <Icon name="play_arrow" /> เริ่ม
+              </button>
+              {visitors != null && (
+                <div className="flex items-center gap-1.5 rounded-full bg-black/35 backdrop-blur px-3.5 py-1.5 text-sm text-white/90">
+                  <Icon name="group" className="!text-base" />
+                  มีผู้ใช้แล้ว {visitors.toLocaleString()} คน
+                </div>
+              )}
+            </div>
           </div>
         )}
 

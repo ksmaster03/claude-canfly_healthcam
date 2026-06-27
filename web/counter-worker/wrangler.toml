@@ -1,0 +1,9 @@
+name = "aicam-counter"
+main = "src/index.ts"
+compatibility_date = "2025-01-01"
+
+# สร้าง namespace ก่อน:  wrangler kv namespace create COUNTER
+# แล้วเอา id ที่ได้มาใส่แทน PUT_KV_ID_HERE
+[[kv_namespaces]]
+binding = "COUNTER"
+id = "PUT_KV_ID_HERE"
