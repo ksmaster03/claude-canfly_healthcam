@@ -41,4 +41,11 @@ if (existsSync(wasmSrc)) {
   console.warn("[skip] ไม่พบ wasm — รัน npm install ก่อน");
 }
 
+// โมเดลวัดอายุ (AgeGenderNet ของ face-api fork)
+const ageSrc = join(web, "node_modules/@vladmandic/face-api/model");
+copyFiles(ageSrc, join(web, "public/face-api-models"), [
+  "age_gender_model-weights_manifest.json",
+  "age_gender_model.bin",
+]);
+
 console.log("เสร็จสิ้น: public/ พร้อมใช้งาน");

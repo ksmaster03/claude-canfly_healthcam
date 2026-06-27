@@ -8,8 +8,9 @@ import {
   createFaceLandmarker,
   createPoseLandmarker,
 } from "./pipeline/landmarkers";
-import { sampleForeheadRGB } from "./pipeline/roi";
+import { sampleForeheadRGB, cropFaceToCanvas } from "./pipeline/roi";
 import { RPPGEstimator } from "./monitors/rppg";
+import { AgeMonitor } from "./monitors/age";
 import { EyeMonitor } from "./monitors/eyes";
 import { EmotionMonitor } from "./monitors/emotion";
 import { PostureMonitor } from "./monitors/posture";
@@ -42,6 +43,7 @@ interface Monitors {
 
 interface Metrics {
   faceFound: boolean;
+  age: number | null;
   hr: number | null;
   hrConf: number;
   stress: number | null;
@@ -62,6 +64,7 @@ interface Metrics {
 
 const EMPTY: Metrics = {
   faceFound: false,
+  age: null,
   hr: null,
   hrConf: 0,
   stress: null,
@@ -89,7 +92,9 @@ export default function App() {
   const poseRef = useRef<PoseLandmarker | null>(null);
   const monRef = useRef<Monitors | null>(null);
   const voiceRef = useRef(new VoiceAlerts(true));
+  const ageRef = useRef(new AgeMonitor());
   const offRef = useRef<HTMLCanvasElement | null>(null);
+  const ageCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const presentSinceRef = useRef<number | null>(null);
   const lastSeenRef = useRef(0);
   const calibrateRef = useRef(false);
@@ -115,7 +120,9 @@ export default function App() {
         stress: new StressMonitor(),
       };
       offRef.current = document.createElement("canvas");
+      ageCanvasRef.current = document.createElement("canvas");
       presentSinceRef.current = null;
+      void ageRef.current.load(); // โหลด TF.js + โมเดลอายุเบื้องหลัง (ไม่บล็อกกล้อง)
 
       setStatus("กำลังขอสิทธิ์กล้อง…");
       const stream = await navigator.mediaDevices.getUserMedia({
@@ -163,6 +170,7 @@ export default function App() {
     const offctx = offRef.current!.getContext("2d", {
       willReadFrequently: true,
     })!;
+    const agectx = ageCanvasRef.current!.getContext("2d")!;
 
     const tick = () => {
       const video = videoRef.current!;
@@ -204,6 +212,10 @@ export default function App() {
           mon.eyes.update(fl, W, H, tSec);
           const bs = fres.faceBlendshapes?.[0];
           if (bs) mon.emotion.update(bs.categories);
+          // วัดอายุ (crop ใบหน้า -> AgeGenderNet, predict ทุก ~2 วิ)
+          if (cropFaceToCanvas(video, fl, ageCanvasRef.current!, agectx)) {
+            ageRef.current.update(ageCanvasRef.current!, tSec);
+          }
         }
 
         const pl = lastPose?.landmarks?.[0];
@@ -251,6 +263,7 @@ export default function App() {
 
           setM({
             faceFound: facePresent,
+            age: ageRef.current.age,
             hr,
             hrConf: mon.rppg.confidence,
             stress: mon.stress.score,
@@ -392,6 +405,11 @@ export default function App() {
           label="อารมณ์ (Mood)"
           value={m.faceFound ? MOOD_TH[m.mood] ?? m.mood : "—"}
           tone={moodTone}
+        />
+        <MetricCard
+          label="อายุโดยประมาณ"
+          value={m.age == null ? (m.faceFound ? "กำลังวัด…" : "—") : `${Math.round(m.age)} ปี`}
+          tone={m.age == null ? "muted" : "neutral"}
         />
         <MetricCard
           label="กะพริบตา"

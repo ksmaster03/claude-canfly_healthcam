@@ -61,6 +61,42 @@ export function sampleForeheadRGB(
   return { r: r / n, g: g / n, b: b / n };
 }
 
+/** ตัดภาพใบหน้าทั้งหน้า (จาก min/max ของ landmarks) ลง canvas 224x224 สำหรับโมเดลวัดอายุ */
+export function cropFaceToCanvas(
+  video: HTMLVideoElement,
+  lm: NormalizedLandmark[],
+  canvas: HTMLCanvasElement,
+  ctx: CanvasRenderingContext2D,
+  margin = 0.2
+): boolean {
+  const W = video.videoWidth;
+  const H = video.videoHeight;
+  if (!W || !H) return false;
+
+  let minx = 1, miny = 1, maxx = 0, maxy = 0;
+  for (const p of lm) {
+    if (p.x < minx) minx = p.x;
+    if (p.x > maxx) maxx = p.x;
+    if (p.y < miny) miny = p.y;
+    if (p.y > maxy) maxy = p.y;
+  }
+  let x1 = minx * W, y1 = miny * H, x2 = maxx * W, y2 = maxy * H;
+  const mw = (x2 - x1) * margin;
+  const mh = (y2 - y1) * margin;
+  x1 = Math.max(0, Math.floor(x1 - mw));
+  y1 = Math.max(0, Math.floor(y1 - mh));
+  x2 = Math.min(W, Math.floor(x2 + mw));
+  y2 = Math.min(H, Math.floor(y2 + mh));
+  const w = x2 - x1;
+  const h = y2 - y1;
+  if (w < 20 || h < 20) return false;
+
+  canvas.width = 224;
+  canvas.height = 224;
+  ctx.drawImage(video, x1, y1, w, h, 0, 0, 224, 224);
+  return true;
+}
+
 /** กล่อง ROI (พิกัดพิกเซลในวิดีโอ) ไว้วาดกรอบบน overlay */
 export function foreheadBox(
   video: HTMLVideoElement,

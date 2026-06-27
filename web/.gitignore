@@ -7,3 +7,4 @@ dist-ssr/
 # โฮสต์เองตอน build — ก๊อปจาก script (ดู README) ไม่ commit ไฟล์ใหญ่
 public/models/*.task
 public/wasm/
+public/face-api-models/
