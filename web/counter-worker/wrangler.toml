@@ -6,4 +6,4 @@ compatibility_date = "2025-01-01"
 # แล้วเอา id ที่ได้มาใส่แทน PUT_KV_ID_HERE
 [[kv_namespaces]]
 binding = "COUNTER"
-id = "PUT_KV_ID_HERE"
+id = "56cfb15902804c14b1ab2bce873c945c"
