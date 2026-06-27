@@ -45,6 +45,7 @@ condition needs your attention, it speaks a short prompt in natural Thai.
 |---|---|---|
 | Heart rate | **rPPG** using the **POS algorithm** (*Plane-Orthogonal-to-Skin*, Wang et al. 2017). Blood pulses shift skin colour imperceptibly; the R/G/B forehead signal is projected onto a skin-tone-orthogonal plane, band-pass filtered (45–240 bpm) and reduced to its FFT peak. | NumPy, SciPy |
 | Stress | **Heart-rate variability (RMSSD)** derived from the same pulse waveform. High variability indicates a relaxed (parasympathetic) state; low variability indicates stress. Mapped to a 0–100 index. | SciPy |
+| Mood | **Facial-expression recognition** from MediaPipe blendshapes (52 facial muscle scores), mapped to seven emotions — neutral, happy, sad, angry, surprised, fearful, disgusted — plus a positive/negative valence for mood trends. Inspired by face-api.js's expression model, implemented natively on the existing landmark model. | MediaPipe |
 | Blink rate | **Eye Aspect Ratio** from 478 face landmarks. Counts blinks per minute and warns below 8/min (prolonged screen focus, dry-eye risk). | MediaPipe |
 | Drowsiness | **PERCLOS** — eyes closed beyond a time threshold raises a fatigue alert. | MediaPipe |
 | Posture | Shoulder tilt and forward-head / slouch detection from pose landmarks, normalised against a personal calibrated baseline. | MediaPipe |
@@ -177,6 +178,7 @@ claude-canfly_healthcam/
 ├── monitors/
 │   ├── rppg.py            heart rate (POS algorithm)
 │   ├── stress.py          HRV / stress index
+│   ├── emotion.py         facial-expression / mood (blendshapes)
 │   ├── eyes.py            blink rate and drowsiness (EAR)
 │   ├── posture.py         shoulder tilt and slouch
 │   └── drink.py           hydration gesture detection

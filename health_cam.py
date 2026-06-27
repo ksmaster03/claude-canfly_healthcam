@@ -50,7 +50,8 @@ from mediapipe.tasks import python as mp_tasks
 from mediapipe.tasks.python import vision
 
 from monitors import (
-    RPPGEstimator, EyeMonitor, PostureMonitor, StressMonitor, DrinkMonitor)
+    RPPGEstimator, EyeMonitor, PostureMonitor, StressMonitor, DrinkMonitor,
+    EmotionMonitor)
 from voice import VoiceAlerts
 
 def resource_base() -> str:
@@ -145,7 +146,8 @@ def build_landmarkers():
     face_opts = vision.FaceLandmarkerOptions(
         base_options=mp_tasks.BaseOptions(model_asset_path=FACE_MODEL),
         running_mode=vision.RunningMode.VIDEO,
-        num_faces=1)
+        num_faces=1,
+        output_face_blendshapes=True)   # เปิด blendshapes ไว้ตรวจอารมณ์/สีหน้า
     pose_opts = vision.PoseLandmarkerOptions(
         base_options=mp_tasks.BaseOptions(model_asset_path=POSE_MODEL),
         running_mode=vision.RunningMode.VIDEO,
@@ -181,6 +183,7 @@ def main():
     eyes = EyeMonitor()
     posture = PostureMonitor()
     stress = StressMonitor()
+    emotion = EmotionMonitor()
     drink = DrinkMonitor(water_seconds, time.time())
 
     present_since: float | None = None
@@ -229,6 +232,8 @@ def main():
             hr_bpm = rppg.estimate()
             stress.update(rppg.filtered, rppg.fs)   # HRV จากคลื่นชีพจรเดียวกัน
             eyes.update(lm, w, h, now)
+            if face_res.face_blendshapes:           # อารมณ์/สีหน้าจาก blendshapes
+                emotion.update(face_res.face_blendshapes[0])
 
         # ----- ลำตัว: ท่านั่ง + ตรวจการดื่มน้ำ -----
         posture_status = posture.status
@@ -261,6 +266,18 @@ def main():
                          f"{stress.score:3.0f}/100 {stress.label}", scol))
         else:
             rows.append(("STRESS (HRV)", "measuring...", GREY))
+
+        # อารมณ์/สีหน้า (จาก blendshapes — แรงบันดาลใจจาก face-api.js)
+        if face_present:
+            if emotion.valence > 0.08:
+                mcol = GREEN
+            elif emotion.valence < -0.08:
+                mcol = RED
+            else:
+                mcol = WHITE
+            rows.append(("MOOD", emotion.emotion, mcol))
+        else:
+            rows.append(("MOOD", "no face", GREY))
 
         if face_present:
             br = eyes.blink_rate

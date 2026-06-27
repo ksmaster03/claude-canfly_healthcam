@@ -12,7 +12,7 @@ import mediapipe as mp
 from mediapipe.tasks import python as mp_tasks
 from mediapipe.tasks.python import vision
 
-from monitors import RPPGEstimator, StressMonitor
+from monitors import RPPGEstimator, StressMonitor, EmotionMonitor
 
 _HERE = os.path.dirname(os.path.abspath(__file__))
 
@@ -86,8 +86,32 @@ def test_stress():
           f"RMSSD={stress.rmssd:.0f}ms SDNN={stress.sdnn:.0f}ms")
 
 
+class _BS:
+    """จำลอง category ของ blendshape (มี .category_name และ .score)"""
+    def __init__(self, name, score):
+        self.category_name = name
+        self.score = score
+
+
+def test_emotion():
+    """EmotionMonitor ควรอ่านอารมณ์จาก blendshapes ได้ (ยิ้ม -> happy)"""
+    em = EmotionMonitor(smoothing=0.0)   # ปิด smoothing ให้เห็นผลทันที
+    # ใบหน้ายิ้มกว้าง
+    smile = [_BS("mouthSmileLeft", 0.9), _BS("mouthSmileRight", 0.9)]
+    em.update(smile)
+    assert em.emotion == "happy", f"คาดว่า happy ได้ {em.emotion}"
+    assert em.valence > 0, "ยิ้มควรได้ valence บวก"
+    print(f"[ok] emotion(smile) = {em.emotion}, valence={em.valence:+.2f}")
+
+    # ใบหน้าเฉย ๆ (ทุกค่าต่ำ) -> neutral
+    em.update([_BS("mouthSmileLeft", 0.02), _BS("jawOpen", 0.01)])
+    assert em.emotion == "neutral", f"คาดว่า neutral ได้ {em.emotion}"
+    print(f"[ok] emotion(rest)  = {em.emotion}")
+
+
 if __name__ == "__main__":
     test_landmarkers()
     test_rppg()
     test_stress()
+    test_emotion()
     print("\nALL SELFTESTS PASSED")

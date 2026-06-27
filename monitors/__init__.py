@@ -4,8 +4,9 @@ from .eyes import EyeMonitor
 from .posture import PostureMonitor
 from .stress import StressMonitor
 from .drink import DrinkMonitor
+from .emotion import EmotionMonitor
 
 __all__ = [
     "RPPGEstimator", "EyeMonitor", "PostureMonitor",
-    "StressMonitor", "DrinkMonitor",
+    "StressMonitor", "DrinkMonitor", "EmotionMonitor",
 ]
